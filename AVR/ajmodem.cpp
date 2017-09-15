@@ -19,21 +19,21 @@ enum { START_BIT = 0, DATA_BIT = 8, STOP_BIT = 9, INACTIVE = 0xff };
 	
 void Modem::setFreq(uint32_t freq)
 {
-	this->freq = freq;
+	this->freq = freq;															//8,000,000
 	baudRate = 1225;
 	lowFreq = 4900;
 	highFreq = 7350;
 	
-	low_freq_micros = (uint16_t) (1000000 / lowFreq);
-	micros_per_timer_count = (uint16_t) (8 / (freq/1000000));
-	tcnt_low_freq = low_freq_micros / micros_per_timer_count;
-	tcnt_low_th_l = tcnt_low_freq * 0.85;
-	tcnt_low_th_h = tcnt_low_freq * 1.10;
-	bit_period = (uint16_t) (1000000 / baudRate);
-	tcnt_bit_period = bit_period / micros_per_timer_count;
-	high_freq_micros = (uint16_t) (1000000/highFreq);
-	tcnt_high_freq = high_freq_micros / micros_per_timer_count;
-	tcnt_high_th_h = tcnt_high_freq * 1.15;
+	low_freq_micros			= (uint16_t) (1000000 / lowFreq);					//204
+	micros_per_timer_count	= (uint16_t) (8 / (freq/1000000));					//1
+	tcnt_low_freq			= low_freq_micros / micros_per_timer_count;			//204
+	tcnt_low_th_l			= tcnt_low_freq * 0.85;								//173
+	tcnt_low_th_h			= tcnt_low_freq * 1.10;								//224
+	bit_period				= (uint16_t) (1000000 / baudRate);					//816 
+	tcnt_bit_period			= bit_period / micros_per_timer_count;				//816
+	high_freq_micros		= (uint16_t) (1000000/highFreq);					//136
+	tcnt_high_freq			= high_freq_micros / micros_per_timer_count;		//136
+	tcnt_high_th_h			= tcnt_high_freq * 1.15;							//156
 }
 
 void Modem::begin(void)
@@ -62,19 +62,13 @@ void Modem::demodulate(void)
 {
 	uint16_t t = TCNT1;
 	uint16_t diff;
-	
 	diff = t - _lastTCNT;
-	
 	if(diff < 4)
-		return;
-	
+		return;	
 	_lastTCNT = t;
-	
 	if(diff > tcnt_low_th_h)
 		return;
-	
 	_lastDiff = diff;
-
 	if(_lastDiff >= tcnt_low_th_l)
 	{
 		_lowCount += _lastDiff;
