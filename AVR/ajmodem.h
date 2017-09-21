@@ -24,7 +24,6 @@ private:
 	uint8_t* _recvBuffer;
 	uint8_t _recvBufferHead;
 	uint8_t _recvBufferTail;
-	uint8_t _lastDiff;
 	uint8_t _recvStat;
 	uint8_t _recvBits;
 	uint8_t _lowCount;

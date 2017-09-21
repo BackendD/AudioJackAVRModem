@@ -1,6 +1,8 @@
 #include "ajmodem.h"
 #include <avr/interrupt.h>
 
+
+
 Modem* Modem::activeObject = nullptr;
 
 Modem::Modem(uint32_t freq, uint8_t bufferSize)
@@ -49,7 +51,7 @@ void Modem::begin(void)
 	Modem::activeObject = this;
 	
 	_lastTCNT = TCNT1;
-	_lastDiff = _lowCount = _highCount = 0;
+	_lowCount = _highCount = 0;
 	
 	TCCR1A &= ~((1<<WGM11) | (1<<WGM10));
 	TCCR1B &= ~((1<<WGM13) | (1<<WGM12) | (1<<CS12) | (1<<CS11) | (1<<CS10));
@@ -63,15 +65,12 @@ void Modem::demodulate(void)
 	uint16_t t = TCNT1;
 	uint16_t diff;
 	diff = t - _lastTCNT;
-	if(diff < 4)
-		return;	
 	_lastTCNT = t;
 	if(diff > tcnt_low_th_h)
 		return;
-	_lastDiff = diff;
-	if(_lastDiff >= tcnt_low_th_l)
+	if(diff >= tcnt_low_th_l)
 	{
-		_lowCount += _lastDiff;
+		_lowCount += diff;
 		if(_recvStat == INACTIVE)
 		{
 			// Start bit detection
@@ -86,7 +85,7 @@ void Modem::demodulate(void)
 			}
 		}
 	}
-	else if(_lastDiff <= (uint8_t)(tcnt_high_th_h))
+	else if(diff <= (uint8_t)(tcnt_high_th_h))
 	{
 		if(_recvStat == INACTIVE)
 		{
@@ -95,7 +94,7 @@ void Modem::demodulate(void)
 		}
 		else
 		{
-			_highCount += _lastDiff;
+			_highCount += diff;
 		}
 	}
 }
@@ -104,4 +103,9 @@ void Modem::demodulate(void)
 ISR(ANA_COMP_vect)
 {
 	Modem::activeObject->demodulate();
+}
+
+ISR(TIMER1_COMPA_vect)
+{
+	
 }
