@@ -8,7 +8,7 @@ Modem* Modem::activeObject = nullptr;
 Modem::Modem(uint32_t freq, uint8_t bufferSize)
 {
 	setFreq(freq);
-	uint8_t buffer[bufferSize];
+	uint8_t buffer[rxBufSize = bufferSize];
 	_recvBuffer = buffer;
 }
 
@@ -105,7 +105,62 @@ ISR(ANA_COMP_vect)
 	Modem::activeObject->demodulate();
 }
 
+void Modem::recv(void)
+{
+	uint8_t high;
+	
+	// Bit logic determination
+	if(_highCount > _lowCount){
+		_highCount = 0;
+		high = 0x80;
+	}
+	else{
+		_lowCount = 0;
+		high = 0x00;
+	}
+	
+	// Start bit reception
+	if(_recvStat == START_BIT){
+		if(!high){
+			_recvStat++;
+		}
+		else{
+			goto end_recv;
+		}
+	}
+	// Data bit reception
+	else if(_recvStat <= DATA_BIT) {
+		_recvBits >>= 1;
+		_recvBits |= high;
+		_recvStat++;
+	}
+	// Stop bit reception
+	else if(_recvStat == STOP_BIT){
+		if(high){
+			// Stored in the receive buffer
+			uint8_t new_tail = (_recvBufferTail + 1) & (rxBufSize - 1);
+			if(new_tail != _recvBufferHead){
+				_recvBuffer[_recvBufferTail] = _recvBits;
+				_recvBufferTail = new_tail;
+			}
+			else{
+				;// Overrun error detection
+			}
+		}
+		else{
+			;// Fleming error detection
+		}
+		goto end_recv;
+	}
+	else{
+		end_recv:
+		_recvStat = INACTIVE;
+		TIMSK &= ~(1<<OCIE1A);
+	}
+}
+
 ISR(TIMER1_COMPA_vect)
 {
-	
+	OCR1A += Modem::activeObject->tcnt_bit_period;
+	Modem::activeObject->recv();
 }

@@ -14,6 +14,8 @@ public:
 	void begin(void);
 	static Modem* activeObject;
 	void demodulate(void);
+	void recv(void);
+	uint16_t tcnt_bit_period;
 private:
 	uint32_t freq;
 	uint32_t baudRate;
@@ -35,7 +37,6 @@ private:
 	uint16_t tcnt_low_th_h;
 	uint16_t tcnt_low_th_l;
 	uint16_t bit_period;
-	uint16_t tcnt_bit_period;
 	uint16_t high_freq_micros;
 	uint16_t tcnt_high_freq;
 	uint16_t tcnt_high_th_h;
