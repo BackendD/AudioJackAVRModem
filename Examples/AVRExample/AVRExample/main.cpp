@@ -24,7 +24,7 @@ int main(void)
 	lcd_init(LCD_DISP_ON);
 	lcd_clrscr();
 	char s[32];
-	sprintf(s,"Not ready to \nreceive yet.");
+	sprintf(s,"Not Ready yet");
 	lcd_puts(s);
 	DDRD |= (1<<7);
 	
@@ -34,7 +34,6 @@ int main(void)
 		PORTD &= ~(1<<7);
 		_delay_ms(100);
 		PORTD |= (1<<7);
-		
     }
 }
 

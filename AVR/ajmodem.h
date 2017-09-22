@@ -16,6 +16,8 @@ public:
 	void demodulate(void);
 	void recv(void);
 	uint16_t tcnt_bit_period;
+	virtual int available();
+	virtual char read();
 private:
 	uint32_t freq;
 	uint32_t baudRate;
