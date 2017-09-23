@@ -35,6 +35,7 @@ void Modem::setFreq(uint32_t freq)
 	tcnt_bit_period			= bit_period / micros_per_timer_count;				//816
 	high_freq_micros		= (uint16_t) (1000000/highFreq);					//136
 	tcnt_high_freq			= high_freq_micros / micros_per_timer_count;		//136
+	tcnt_high_th_l			= tcnt_high_freq * 0.85;							//173
 	tcnt_high_th_h			= tcnt_high_freq * 1.15;							//156
 }
 
@@ -46,6 +47,7 @@ void Modem::begin(void)
 	DDRB &= ~((1<<3) | (1<<2));
 	PORTB &= ~((1<<3) | (1<<2));
 	
+	_recvStat = INACTIVE;
 	_recvBufferHead = _recvBufferTail = 0;
 	
 	Modem::activeObject = this;
@@ -54,7 +56,8 @@ void Modem::begin(void)
 	_lowCount = _highCount = 0;
 	
 	TCCR1A &= ~((1<<WGM11) | (1<<WGM10));
-	TCCR1B &= ~((1<<WGM13) | (1<<WGM12) | (1<<CS12) | (1<<CS11) | (1<<CS10));
+	TCCR1B &= ~((1<<WGM13) | (1<<WGM12) | (1<<CS12) | (1<<CS10));
+	TCCR1B |= (1<<CS11);
 	
 	ACSR &= ~(1<<ACIS0);
 	ACSR |= ((1<<ACIE) | (1<<ACIS1));
@@ -65,12 +68,16 @@ void Modem::demodulate(void)
 	uint16_t t = TCNT1;
 	uint16_t diff;
 	diff = t - _lastTCNT;
+	if (diff < 28)
+		return;
 	_lastTCNT = t;
 	if(diff > tcnt_low_th_h)
 		return;
+	
 	if(diff >= tcnt_low_th_l)
 	{
 		_lowCount += diff;
+		
 		if(_recvStat == INACTIVE)
 		{
 			// Start bit detection
@@ -79,16 +86,16 @@ void Modem::demodulate(void)
 				_recvStat = START_BIT;
 				_highCount = 0;
 				_recvBits  = 0;
-				OCR1A = t + tcnt_bit_period - (uint16_t)_lowCount;
+				OCR1A = t + tcnt_bit_period - _lowCount;
 				TIFR |= (1<<OCF1A);
 				TIMSK |= (1<<OCIE1A);
 			}
 		}
 	}
-	else if(diff <= (uint8_t)(tcnt_high_th_h))
+	else if(diff <= tcnt_high_th_h)
 	{
 		if(_recvStat == INACTIVE)
-		{
+		{			
 			_lowCount = 0;
 			_highCount = 0;
 		}

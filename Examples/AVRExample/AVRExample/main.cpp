@@ -1,9 +1,9 @@
 /*
- * AVRExample.cpp
- *
- * Created: 2017/09/02 08:30:42
- * Author : Constructor
- */ 
+* AVRExample.cpp
+*
+* Created: 2017/09/02 08:30:42
+* Author : Constructor
+*/
 
 #define F_CPU 8000000
 
@@ -22,18 +22,21 @@ int main(void)
 	modem.begin();
 	
 	lcd_init(LCD_DISP_ON);
-	lcd_clrscr();
 	char s[32];
-	sprintf(s,"Not Ready yet");
-	lcd_puts(s);
 	DDRD |= (1<<7);
-	
-    while (1) 
-    {
+	while (1)
+	{
+		
+		if(modem.available())
+		{
+			sprintf(s,"%c", modem.read());
+			lcd_clrscr();
+			lcd_puts(s);
+		}
 		_delay_ms(100);
 		PORTD &= ~(1<<7);
 		_delay_ms(100);
 		PORTD |= (1<<7);
-    }
+	}
 }
 

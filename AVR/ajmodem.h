@@ -25,13 +25,14 @@ private:
 	uint32_t highFreq;
 	uint32_t rxBufSize;
 	uint16_t _lastTCNT;
+	uint16_t _lowCount;
+	uint16_t _highCount;
 	uint8_t* _recvBuffer;
 	uint8_t _recvBufferHead;
 	uint8_t _recvBufferTail;
 	uint8_t _recvStat;
 	uint8_t _recvBits;
-	uint8_t _lowCount;
-	uint8_t _highCount;
+	
 		
 	uint16_t low_freq_micros;
 	uint16_t micros_per_timer_count;
@@ -42,6 +43,7 @@ private:
 	uint16_t high_freq_micros;
 	uint16_t tcnt_high_freq;
 	uint16_t tcnt_high_th_h;
+	uint16_t tcnt_high_th_l;
 };
 
 #endif
