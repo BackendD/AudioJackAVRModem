@@ -16,17 +16,17 @@ public:
 	void demodulate(void);
 	void recv(void);
 	uint16_t tcnt_bit_period;
-	virtual int available();
-	virtual char read();
+	virtual uint8_t available();
+	virtual uint8_t read();
 private:
 	uint32_t freq;
 	uint32_t baudRate;
 	uint32_t lowFreq;
 	uint32_t highFreq;
-	uint32_t rxBufSize;
 	uint16_t _lastTCNT;
 	uint16_t _lowCount;
 	uint16_t _highCount;
+	uint8_t rxBufSize;
 	uint8_t* _recvBuffer;
 	uint8_t _recvBufferHead;
 	uint8_t _recvBufferTail;

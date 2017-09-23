@@ -1,15 +1,22 @@
 #include "ajmodem.h"
 #include <avr/interrupt.h>
+#include <stdlib.h>
 
+void * operator new[](size_t size) {
+	return malloc(size);
+}
 
+void operator delete[](void * ptr) {
+	free(ptr);
+}
 
 Modem* Modem::activeObject = nullptr;
 
 Modem::Modem(uint32_t freq, uint8_t bufferSize)
 {
 	setFreq(freq);
-	uint8_t buffer[rxBufSize = bufferSize];
-	_recvBuffer = buffer;
+	 
+	_recvBuffer = new uint8_t[rxBufSize = bufferSize];
 }
 
 Modem::~Modem()
@@ -21,22 +28,22 @@ enum { START_BIT = 0, DATA_BIT = 8, STOP_BIT = 9, INACTIVE = 0xff };
 	
 void Modem::setFreq(uint32_t freq)
 {
-	this->freq = freq;															//8,000,000
+	this->freq = freq;																	//8,000,000
 	baudRate = 1225;
 	lowFreq = 4900;
 	highFreq = 7350;
 	
-	low_freq_micros			= (uint16_t) (1000000 / lowFreq);					//204
-	micros_per_timer_count	= (uint16_t) (8 / (freq/1000000));					//1
-	tcnt_low_freq			= low_freq_micros / micros_per_timer_count;			//204
-	tcnt_low_th_l			= tcnt_low_freq * 0.85;								//173
-	tcnt_low_th_h			= tcnt_low_freq * 1.10;								//224
-	bit_period				= (uint16_t) (1000000 / baudRate);					//816 
-	tcnt_bit_period			= bit_period / micros_per_timer_count;				//816
-	high_freq_micros		= (uint16_t) (1000000/highFreq);					//136
-	tcnt_high_freq			= high_freq_micros / micros_per_timer_count;		//136
-	tcnt_high_th_l			= tcnt_high_freq * 0.85;							//173
-	tcnt_high_th_h			= tcnt_high_freq * 1.15;							//156
+	low_freq_micros			= (uint16_t) (1000000 / lowFreq);							//204
+	micros_per_timer_count	= (uint16_t) (8 / (freq/1000000));							//1
+	tcnt_low_freq			= low_freq_micros / micros_per_timer_count;					//204
+	tcnt_low_th_l			= tcnt_low_freq - (tcnt_low_freq - tcnt_high_freq) / 2;		//173
+	tcnt_low_th_h			= tcnt_low_freq + (tcnt_low_freq - tcnt_high_freq) / 2;		//224
+	bit_period				= (uint16_t) (1000000 / baudRate);							//816 
+	tcnt_bit_period			= bit_period / micros_per_timer_count;						//816
+	high_freq_micros		= (uint16_t) (1000000/highFreq);							//136
+	tcnt_high_freq			= high_freq_micros / micros_per_timer_count;				//136
+	tcnt_high_th_l			= tcnt_high_freq - (tcnt_low_freq - tcnt_high_freq) / 2;	//173
+	tcnt_high_th_h			= tcnt_high_freq + (tcnt_low_freq - tcnt_high_freq) / 2;	//156
 }
 
 void Modem::begin(void)
@@ -68,13 +75,13 @@ void Modem::demodulate(void)
 	uint16_t t = TCNT1;
 	uint16_t diff;
 	diff = t - _lastTCNT;
-	if (diff < 28)
+	if (diff < tcnt_high_th_l)
 		return;
 	_lastTCNT = t;
 	if(diff > tcnt_low_th_h)
 		return;
 	
-	if(diff >= tcnt_low_th_l)
+	if(tcnt_low_th_l <= diff && diff <= tcnt_low_th_h)
 	{
 		_lowCount += diff;
 		
@@ -92,7 +99,7 @@ void Modem::demodulate(void)
 			}
 		}
 	}
-	else if(diff <= tcnt_high_th_h)
+	else if(tcnt_high_th_l <= diff && diff <= tcnt_high_th_h)
 	{
 		if(_recvStat == INACTIVE)
 		{			
@@ -127,7 +134,6 @@ void Modem::recv(void)
 		_lowCount = 0;
 		high = 0x00;			//0b0000 0000
 	}
-	
 	// Start bit reception
 	if(_recvStat == START_BIT)
 	{
@@ -153,10 +159,10 @@ void Modem::recv(void)
 		if(high)
 		{
 			// Stored in the receive buffer
-			uint8_t new_tail = (_recvBufferTail + 1) & (rxBufSize - 1);
+			uint8_t new_tail = (_recvBufferTail + 1 == rxBufSize) ? 0 : _recvBufferTail + 1;
 			if(new_tail != _recvBufferHead)
 			{
-				_recvBuffer[_recvBufferTail] = _recvBits;
+				*(_recvBuffer + _recvBufferTail) = _recvBits;
 				_recvBufferTail = new_tail;
 			}
 			else
@@ -184,16 +190,16 @@ ISR(TIMER1_COMPA_vect)
 	Modem::activeObject->recv();
 }
 
-int Modem::available()
+uint8_t Modem::available()
 {
-	return (_recvBufferTail + rxBufSize - _recvBufferHead) & (rxBufSize - 1);
+	return _recvBufferTail == _recvBufferHead ? 0 : 1;
 }
 
-char Modem::read()
+uint8_t Modem::read()
 {
 	if(_recvBufferHead == _recvBufferTail)
-	return -1;
-	char d = _recvBuffer[_recvBufferHead];
-	_recvBufferHead = (_recvBufferHead + 1) & (rxBufSize - 1);
-	return d;
+		return -1;
+	uint8_t c = *(_recvBuffer + _recvBufferHead);
+	_recvBufferHead = (_recvBufferHead + 1 == rxBufSize) ? 0 : _recvBufferHead + 1;
+	return c;
 }

@@ -24,15 +24,22 @@ int main(void)
 	lcd_init(LCD_DISP_ON);
 	char s[32];
 	DDRD |= (1<<7);
+	int i = 0;
 	while (1)
 	{
-		
 		if(modem.available())
 		{
+			
 			sprintf(s,"%c", modem.read());
-			lcd_clrscr();
 			lcd_puts(s);
+			i++;
+			if (i > 15)
+			{
+				lcd_clrscr();
+				i = 0;
+			}
 		}
+		
 		_delay_ms(100);
 		PORTD &= ~(1<<7);
 		_delay_ms(100);
